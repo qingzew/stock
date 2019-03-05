@@ -1,0 +1,4 @@
+tushare
+bs4 
+apscheduler
+watchdog

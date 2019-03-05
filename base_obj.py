@@ -13,6 +13,12 @@ class BaseObj(object):
             code = row['ts_code']
             self.ts_codes.append(code)
 
+        self.ts_codes_to_name = {}
+        for _, row in self.basic_datas.iterrows():
+            code = row['ts_code']
+            self.ts_codes_to_name[code] = row['name']
+
+
 
 if __name__ == '__main__':
     bo = BaseObj()

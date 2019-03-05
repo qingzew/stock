@@ -1,11 +1,12 @@
 import logging
 
 # create logger
-logger = logging.getLogger('stock')
+#logger = logging.getLogger('stock')
+logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 # create file handler
-fh1 = logging.FileHandler('./log')
+fh1 = logging.FileHandler('./logs/log')
 fh1.setLevel(logging.DEBUG)
 
 fh2 = logging.StreamHandler()

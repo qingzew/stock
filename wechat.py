@@ -19,36 +19,43 @@ import os
 import time
 import codecs
 import requests
-#import itchat
-from itchat.content import *
 import hashlib
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+from logger import logger
 
-md5 = None
-file_to_check = 'candidate_stocks.txt'
+class FileCreateHandler(FileSystemEventHandler):
+    def __init__(self):
+        super(FileCreateHandler, self).__init__()
 
-while 1:
+    # override
+    def on_any_event(self, event):
+        if event.src_path.endswith('.txt'):
+            msgs = codecs.open(event.src_path, 'r', 'utf-8').readlines()
+            new_msgs = ''
+            for line in msgs:
+                new_msgs += line.strip() + '\n\n'
+
+            try:
+                url = 'https://sc.ftqq.com/SCU41176Teb7e3a6397425be0f27a72a4c2fcdb885c3e08d2af0f5.send'
+                req = requests.post(url, data = {'text': 'Notice', 'desp': new_msgs})
+            except Exception as e:
+                logger.warning(e)
+
+
+
+if __name__ == '__main__':
+    path = './result'
+    observer = Observer()
+    observer.schedule(FileCreateHandler(), path, recursive=True)
+    observer.start()
     try:
-        #msgs = codecs.open(file_to_check, 'r', 'utf-8').readlines()
-        msgs = codecs.open(file_to_check, 'r', 'utf-8').read()
-        cur_md5 = hashlib.md5(msgs).hexdigest()
-
-        if cur_md5 == md5:
-            print '{} has no changes, waiting 30min'.format(file_to_check)
-            #time.sleep(30 * 60)
-            time.sleep(3)
-            continue
-        else:
-            md5 = cur_md5
-
-        print 'sending msg...'
-
-        #msgs = codecs.open(file_to_check, 'r', 'utf-8').readlines()
-        url = 'https://sc.ftqq.com/SCU41176Teb7e3a6397425be0f27a72a4c2fcdb885c3e08d2af0f5.send'
-        results = requests.post(url, data = {'text': 'test', 'desp': msgs})
-    except Exception as e:
-        print e
+        while True:
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        observer.stop()
+    observer.join()
 
 
-    
 
 # set sw=4 ts=4 sts=4 et tw=78

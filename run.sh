@@ -3,5 +3,5 @@
 # pip install -t . -U tushare -i https://pypi.tuna.tsinghua.edu.cn/simple --no-deps
 #sudo docker run --runtime nvidia --rm -it -v /home/wang/Code/:/root/work nvidia/cuda:dev bash
 
-nohup python main.py &
-nohup python wechat.py &
+#nohup python main.py &
+nohup python main.py -t &

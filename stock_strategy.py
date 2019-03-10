@@ -5,34 +5,41 @@
 ###############################################################
 # Copyright (C) 2019 your company All Rights Reserved
 #
-# Distributed under terms of the LGPL3 license.
+# Distributed under terms of the GPL3 license.
 ###############################################################
 
 """
-    @file pricing_out_of_market.py
+    @file stock_strategy.py
     @author wangqingze
     @date 2019-03-04 10:24
     @brief
 """
 
 import datetime
-import tushare as ts 
+from collections import OrderedDict, defaultdict
+import pandas as pd
+from pandas import Series, DataFrame
+import numpy as np
 
-from base_obj import BaseObj
+from stock_data import StockData
 from logger import logger
 
-class PricingOutOfMarket(BaseObj):
+class StockStrategy(object):
+    """
+    stock strategy
+    """
+
     def __init__(self):
-        super(PricingOutOfMarket, self).__init__()
+        """
+        """
 
     # pricing out of market
     def is_pricing_out_of_market(self, st_data):
-
         """
-        Args:
+        args:
             st_data: stock price data in 10 consecutive days        
 
-        Return:
+        return:
             whether the stock is pricing out of market
         """
         ts_code = st_data.iloc[0, 0]
@@ -86,9 +93,9 @@ class PricingOutOfMarket(BaseObj):
             if abs(low_price_1 - high_price_1) > 0.1:
                 flag_1st = True
             else: 
-                logger.debug('1st {} {} fail'.format(ts_code, trade_date_1))
+                logger.debug('poom 1st {} {} fail'.format(ts_code, trade_date_1))
         else:
-            logger.debug('1st {} {} fail'.format(ts_code, trade_date_0))
+            logger.debug('poom 1st {} {} fail'.format(ts_code, trade_date_0))
 
         flag_2ed = False
         if pct_change_0 > 9.95 and abs(low_price_0 - close_price_0) < 0.05:
@@ -99,64 +106,69 @@ class PricingOutOfMarket(BaseObj):
                 if abs(low_price_2 - high_price_2) > 0.1:
                     flag_2ed = True
                 else: 
-                    logger.debug('2ed {} {} fail'.format(ts_code, trade_date_2))
+                    logger.debug('poom 2ed {} {} fail'.format(ts_code, trade_date_2))
             else:
-                logger.debug('2ed {} {} fail'.format(ts_code, trade_date_1))
+                logger.debug('poom 2ed {} {} fail'.format(ts_code, trade_date_1))
         else: 
-            logger.debug('2ed {} {} fail'.format(ts_code, trade_date_0))
+            logger.debug('poom 2ed {} {} fail'.format(ts_code, trade_date_0))
 
+        
         return flag_1st, flag_2ed
 
+    # ma go up
+    def is_ma_go_up(self, st_data):
+        days = 7 
+        ma5 = st_data.ix[0:days:1, 'ma5'].tolist()
+        ma10 = st_data.ix[0:days:1, 'ma10'].tolist()
+        ma20 = st_data.ix[0:days:1, 'ma20'].tolist()
 
-    def get_pricing_out_of_market(self):
-        """
-        Args:
-        Return:
-            1st_pricing_out_of_market: stocks pricing out of market firstly
-            2ed_pricing_out_of_market: stocks pricing out of market secondly
-        """
-        pro = ts.pro_api('95f7a4bf060e97230010a4287cf6db5a5e58c4deadef29f31d966978')
-    
-        #today = datetime.date.today()
-        #today = today.strftime('%Y%m%d')
-        start_date = (datetime.date.today() - datetime.timedelta(days=30)).strftime('%Y%m%d')
-        end_date = datetime.date.today().strftime('%Y%m%d')
-        #today = today.strftime('%Y%m%d')
-        trade_cal = pro.trade_cal(exchange='', start_date=start_date, end_date=end_date)
-        trade_cal = trade_cal[::-1]
-        include_days = []
-        for idx, row in trade_cal.iterrows():
-            if row['is_open'] == 1:
-                include_days.append(row['cal_date'])
+        #ma5_subtract_ma10 = (np.array(ma5) - np.array(ma10)) / np.array(ma10)
+        #ma10_subtract_ma20 = (np.array(ma10) - np.array(ma20)) / np.array(ma20)
+        ma5_subtract_ma10 = np.array(ma5) - np.array(ma10)
+        ma10_subtract_ma20 = np.array(ma10) - np.array(ma20)
+        logger.debug('ma5 - ma10 {}'.format(ma5_subtract_ma10))
+        logger.debug('ma10 - ma20 {}'.format(ma10_subtract_ma20))
+       
+        ma5_decrease = all(x / y > 1.3 for x, y in zip(ma5_subtract_ma10, ma5_subtract_ma10[1:]))
+        ma10_decrease = all(x / y > 1.3 for x, y in zip(ma10_subtract_ma20, ma10_subtract_ma20[1:]))
+  
+        ma5_subtract_ma10 = ma5_subtract_ma10 > 0
+        ma10_subtract_ma20 = ma10_subtract_ma20 > 0
 
-            if len(include_days) == 10:
-                break
+        def is_two_seg(arr):
+            idx = np.where(arr == 0)[0]
+            if idx.shape[0] == 0:
+                return False
+            
+            return np.sum(arr[idx[0]:]) == 0
+        
+        ma5_pattern = False
+        ma10_pattern = False
+        
+        if is_two_seg(ma5_subtract_ma10):
+            ma5_pattern = True
+        if is_two_seg(ma10_subtract_ma20):
+            ma5_pattern = True
 
-        pricing_out_of_market_1st = []
-        pricing_out_of_market_2ed = []
-        for ts_code in self.ts_codes:
-            try:
-            	df = ts.pro_bar(pro_api=pro, 
-            	    ts_code=ts_code, 
-            	    asset='E', 
-            	    start_date=include_days[-1], 
-            	    end_date=include_days[0], 
-            	    freq='D',
-            	    adj='qfq')
+        return ma5_decrease and ma5_pattern, ma10_decrease and ma10_pattern
 
-                flag_1st, flag_2ed = self.is_pricing_out_of_market(df)
-                if flag_1st:
-                    pricing_out_of_market_1st.append([ts_code, self.ts_codes_to_name[ts_code]])
-
-                if flag_2ed:
-                    pricing_out_of_market_2ed.append([ts_code, self.ts_codes_to_name[ts_code]])
-            except Exception as e:
-                print e
-
-        return pricing_out_of_market_1st, pricing_out_of_market_2ed
 
 if __name__ == '__main__':
-    poom = PricingOutOfMarket()
-    print poom.get_pricing_out_of_market()
+    import tushare as ts
+    pro = ts.pro_api('95f7a4bf060e97230010a4287cf6db5a5e58c4deadef29f31d966978')
+    
+    start_date = (datetime.date.today() - datetime.timedelta(days=60)).strftime('%Y%m%d')
+    end_date = datetime.date.today().strftime('%Y%m%d')
+    df = ts.pro_bar(pro_api=pro, 
+            ts_code='000001.SZ', 
+            asset='E', 
+            start_date=start_date,
+            end_date=end_date,
+            freq='D',
+            adj='qfq', 
+            ma=[5, 10, 20])
 
-
+    print df
+    ss = StockStrategy()
+    #print ss.is_pricing_out_of_market(df)
+    print ss.is_ma_go_up(df)

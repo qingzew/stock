@@ -39,8 +39,7 @@ class StockData(object):
     def get_ts_code_to_name(self):
         return self._ts_codes_to_name
 
-    def get_df_by_st_code(self, ts_code, start_date, end_date,
-            ma=[]):
+    def get_df_by_st_code(self, ts_code, start_date, end_date, ma=[]):
         try:
             df = ts.pro_bar(pro_api=self.pro, 
                     ts_code=ts_code, 

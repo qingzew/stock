@@ -98,12 +98,12 @@ def job():
 
 if __name__ == '__main__':
     if args.run:
-         sched = BlockingScheduler()
-         sched.add_job(job, 'cron', day_of_week='mon-fri',  hour=15, minute=0)
-         sched.start()
+        sched = BlockingScheduler()
+        sched.add_job(job, 'cron', day_of_week='mon-fri',  hour=15, minute=0)
+        sched.start()
     elif args.test:
-         logger.info('testing...')
-         job()
+        logger.info('testing...')
+        job()
     else:
         print('usage: main.py [-h] [-r] [-t]')
 

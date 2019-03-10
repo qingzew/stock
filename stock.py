@@ -54,10 +54,10 @@ class Stock(object):
         include_days = []
         for idx, row in trade_cal.iterrows():
             if row['is_open'] == 1:
-               include_days.append(row['cal_date'])
+                include_days.append(row['cal_date'])
 
             if len(include_days) == days:
-               break
+                break
         if ts_codes is None:
             ts_codes = self._sd.get_ts_codes()
         elif not isinstance(ts_codes, list):

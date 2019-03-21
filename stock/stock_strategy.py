@@ -88,23 +88,23 @@ class StockStrategy(object):
         if pct_change_0 > 9.95 and pct_change_1 > 9.95:
             logger.debug('====maybe this is the one====')
 
-        flag_1st = False
+        flag_poom_1st = False
         if pct_change_0 > 9.95 and abs(low_price_0 - close_price_0) < 0.05:
             if abs(low_price_1 - high_price_1) > 0.1:
-                flag_1st = True
+                flag_poom_1st = True
             else: 
                 logger.debug('poom 1st {} {} fail'.format(ts_code, trade_date_1))
         else:
             logger.debug('poom 1st {} {} fail'.format(ts_code, trade_date_0))
 
-        flag_2ed = False
+        flag_poom_2ed = False
         if pct_change_0 > 9.95 and abs(low_price_0 - close_price_0) < 0.05:
             if pct_change_1 > 9.95 and abs(low_price_1 - close_price_1) < 0.05:
                 #if pct_change_2 <= 0.98 and low_price_2 < high_price_2:
                     #if vol_0 < vol_1 and vol_1 < vol2:
                     #    return True
                 if abs(low_price_2 - high_price_2) > 0.1:
-                    flag_2ed = True
+                    flag_poom_2ed = True
                 else: 
                     logger.debug('poom 2ed {} {} fail'.format(ts_code, trade_date_2))
             else:
@@ -112,8 +112,16 @@ class StockStrategy(object):
         else: 
             logger.debug('poom 2ed {} {} fail'.format(ts_code, trade_date_0))
 
+          
+        flag_poom_1 = False 
+        if pct_change_0 > 9.95:
+            flag_poom_1 = True
         
-        return flag_1st, flag_2ed
+        flag_poom_2 = False 
+        if pct_change_0 > 9.95 and pct_change_1 > 9.95: 
+            flag_poom_2 = True
+
+        return flag_poom_1st, flag_poom_2ed, flag_poom_1, flag_poom_2
 
     # ma go up
     def is_ma_go_up(self, st_data):
@@ -129,8 +137,8 @@ class StockStrategy(object):
         logger.debug('ma5 - ma10 {}'.format(ma5_subtract_ma10))
         logger.debug('ma10 - ma20 {}'.format(ma10_subtract_ma20))
        
-        ma5_decrease = all(x / y > 1.3 for x, y in zip(ma5_subtract_ma10, ma5_subtract_ma10[1:]))
-        ma10_decrease = all(x / y > 1.3 for x, y in zip(ma10_subtract_ma20, ma10_subtract_ma20[1:]))
+        ma5_decrease = all(x / y > 1.3 for x, y in zip(ma5_subtract_ma10[0:], ma5_subtract_ma10[1:]))
+        ma10_decrease = all(x / y > 1.3 for x, y in zip(ma10_subtract_ma20[0:], ma10_subtract_ma20[1:]))
   
         ma5_subtract_ma10 = ma5_subtract_ma10 > 0
         ma10_subtract_ma20 = ma10_subtract_ma20 > 0
@@ -152,6 +160,13 @@ class StockStrategy(object):
 
         return ma5_decrease and ma5_pattern, ma10_decrease and ma10_pattern
 
+    # vol go up
+    def is_vol_go_up(self, st_data):
+        days = 5 
+        vol = st_data.ix[0:days:1, 'vol'].tolist()
+
+        return all(x < y for x, y in zip(vol[0:], vol[1:]))
+
 
 if __name__ == '__main__':
     import tushare as ts
@@ -165,10 +180,11 @@ if __name__ == '__main__':
             start_date=start_date,
             end_date=end_date,
             freq='D',
-            adj='qfq', 
-            ma=[5, 10, 20])
+            adj='qfq')
+    #        ma=[5, 10, 20])
 
     print df
-    ss = StockStrategy()
+    #ss = StockStrategy()
     #print ss.is_pricing_out_of_market(df)
-    print ss.is_ma_go_up(df)
+    #print ss.is_ma_go_up(df)
+    #print ss.is_vol_go_up(df)

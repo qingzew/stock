@@ -4,4 +4,5 @@
 #sudo docker run --runtime nvidia --rm -it -v /home/wang/Code/:/root/work nvidia/cuda:dev bash
 
 #nohup python main.py &
-nohup python main.py -t &
+#nohup python main.py -t &
+nohup python main.py -r &

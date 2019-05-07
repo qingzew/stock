@@ -41,15 +41,20 @@ class Stock(object):
 
         self._st_data = defaultdict(DataFrame)
         
+        #self._mp = OrderedDict([
+        #        ('##一字板\n\n', 'poom_1st'),
+        #        ('##二字板\n\n', 'poom_2ed'),
+        #        #('##首板\n\n', 'poom_1'),
+        #        #('##二板\n\n', 'poom_2'),
+        #        ('##多头1\n\n', 'ma5'),
+        #        ('##多头2\n\n', 'ma10'),
+        #        #('##增量\n\n', 'vol')])
         self._mp = OrderedDict([
                 ('##一字板\n\n', 'poom_1st'),
                 ('##二字板\n\n', 'poom_2ed'),
-                ('##首板\n\n', 'poom_1'),
-                ('##二板\n\n', 'poom_2'),
                 ('##多头1\n\n', 'ma5'),
-                ('##多头2\n\n', 'ma10'),
-                ('##增量\n\n', 'vol')])
-                
+                ('##多头2\n\n', 'ma10')])
+       
 
     def init_data(self, ts_codes=None, days=60):
         """

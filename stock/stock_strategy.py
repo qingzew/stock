@@ -125,10 +125,13 @@ class StockStrategy(object):
 
     # ma go up
     def is_ma_go_up(self, st_data):
-        days = 7 
+        days = 4 
         ma5 = st_data.ix[0:days:1, 'ma5'].tolist()
         ma10 = st_data.ix[0:days:1, 'ma10'].tolist()
         ma20 = st_data.ix[0:days:1, 'ma20'].tolist()
+
+        if ma5[0] <= ma[-1]:
+            return False, False
 
         #ma5_subtract_ma10 = (np.array(ma5) - np.array(ma10)) / np.array(ma10)
         #ma10_subtract_ma20 = (np.array(ma10) - np.array(ma20)) / np.array(ma20)
@@ -137,8 +140,8 @@ class StockStrategy(object):
         logger.debug('ma5 - ma10 {}'.format(ma5_subtract_ma10))
         logger.debug('ma10 - ma20 {}'.format(ma10_subtract_ma20))
        
-        ma5_decrease = all(x / y > 1.3 for x, y in zip(ma5_subtract_ma10[0:], ma5_subtract_ma10[1:]))
-        ma10_decrease = all(x / y > 1.3 for x, y in zip(ma10_subtract_ma20[0:], ma10_subtract_ma20[1:]))
+        ma5_decrease = all(x / y > 1.05 for x, y in zip(ma5_subtract_ma10[0:], ma5_subtract_ma10[1:]))
+        ma10_decrease = all(x / y > 1.03 for x, y in zip(ma10_subtract_ma20[0:], ma10_subtract_ma20[1:]))
   
         ma5_subtract_ma10 = ma5_subtract_ma10 > 0
         ma10_subtract_ma20 = ma10_subtract_ma20 > 0

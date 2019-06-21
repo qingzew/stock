@@ -21,6 +21,8 @@ from logger import logger
 
 class StockData(object):
     def __init__(self):
+        #ts.set_token('95f7a4bf060e97230010a4287cf6db5a5e58c4deadef29f31d966978')
+        #self.pro = ts.pro_api()
         self.pro = ts.pro_api('95f7a4bf060e97230010a4287cf6db5a5e58c4deadef29f31d966978')
 
         basic_datas = self.pro.stock_basic(exchange_id='', list_status='L', 
@@ -42,8 +44,8 @@ class StockData(object):
     def get_df_by_st_code(self, ts_code, start_date, end_date,
             ma=[]):
         try:
-            df = ts.pro_bar(pro_api=self.pro, 
-                    ts_code=ts_code, 
+            df = ts.pro_bar(api=self.pro, 
+                    ts_code=ts_code,
                     asset='E', 
                     start_date=start_date, 
             	    end_date=end_date, 
@@ -53,6 +55,7 @@ class StockData(object):
 
             return df
         except Exception as e:
+            print(e)
             logger.warning(e)
 
 
@@ -69,6 +72,7 @@ if __name__ == '__main__':
     #for idx, v1 in df.ix[0:5:2, 'ma5'].iteritems():
     #    print idx, v1
 
+    print df
     for idx, row in df.ix[0:5:2, ['ma5', 'ma_v_5']].iterrows():
         print idx, row['ma5']
 

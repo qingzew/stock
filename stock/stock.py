@@ -49,14 +49,25 @@ class Stock(object):
         #        ('##多头1\n\n', 'ma5'),
         #        ('##多头2\n\n', 'ma10'),
         #        #('##增量\n\n', 'vol')])
+        #self._mp = OrderedDict([
+        #        ('##一字板\n\n', 'poom_1st'),
+        #        ('##二字板\n\n', 'poom_2ed'),
+        #        ('##多头0\n\n', 'ma'),
+        #        ('##多头1\n\n', 'ma5'),
+        #        ('##多头2\n\n', 'ma10')])
         self._mp = OrderedDict([
-                ('##一字板\n\n', 'poom_1st'),
-                ('##二字板\n\n', 'poom_2ed'),
-                ('##多头1\n\n', 'ma5'),
-                ('##多头2\n\n', 'ma10')])
-       
+                ('###一字板\n\n', 'poom_1st'),
+                ('###二字板\n\n', 'poom_2ed'),
+                ('###ma5&10&20长排列\n\n', 'ma_sort_short'),
+                ('###ma5&10&20&30长排列\n\n', 'ma_sort_medium'),
+                ('###ma5&10&20&30&60长排列\n\n', 'ma_sort_long'),
+                ('###ma5&10&20短排列\n\n', 'ma_short'),
+                ('###ma5&10&20&30短排列\n\n', 'ma_medium'),
+                ('###ma5&10&20&30&60短排列\n\n', 'ma_long'),
+                ])
 
-    def init_data(self, ts_codes=None, days=60):
+
+    def init_data(self, ts_codes=None, days=90):
         """
         get stock data for once
         args:
@@ -65,7 +76,7 @@ class Stock(object):
         return:
             basic datas for specified stock
         """
-        start_date = (datetime.date.today() - datetime.timedelta(days=days + 10)).strftime('%Y%m%d')
+        start_date = (datetime.date.today() - datetime.timedelta(days=days)).strftime('%Y%m%d')
         end_date = datetime.date.today().strftime('%Y%m%d')
 
         trade_cal = self._sd.get_trade_cal()
@@ -86,7 +97,7 @@ class Stock(object):
                 df = self._sd.get_df_by_st_code(ts_code,
                         start_date=include_days[-1],
                         end_date=include_days[0],
-                        ma=[5, 10, 20])
+                        ma=[5, 10, 20, 30, 60])
 
                 self._st_data[ts_code] = df
             except Exception as e:
@@ -126,10 +137,14 @@ class Stock(object):
         """
         for ts_code, df in self._st_data.items():
             try:
-                flag_ma5, flag_ma10 = self._ss.is_ma_go_up(df)
+                ret = self._ss.is_ma_go_up(df)
 
-                self._ts_code_to_strategy[ts_code]['ma5'] = flag_ma5
-                self._ts_code_to_strategy[ts_code]['ma10'] = flag_ma5 and flag_ma10
+                self._ts_code_to_strategy[ts_code]['ma_sort_short'] = ret['ma_sort_short']
+                self._ts_code_to_strategy[ts_code]['ma_sort_medium'] = ret['ma_sort_medium'] 
+                self._ts_code_to_strategy[ts_code]['ma_sort_long'] = ret['ma_sort_long'] 
+                self._ts_code_to_strategy[ts_code]['ma_short'] = ret['ma_short'] 
+                self._ts_code_to_strategy[ts_code]['ma_medium'] = ret['ma_medium'] 
+                self._ts_code_to_strategy[ts_code]['ma_long'] = ret['ma_long'] 
             except Exception as e:
                 logger.warning(e)
 
@@ -160,7 +175,7 @@ class Stock(object):
                     fields = ts_code.split('.')
                     content += url_format.format(name.encode('utf-8'), fields[1] + fields[0])
                     #content += url_format.format(name, fields[1] + fields[0])
-            logger.debug('send_to_wechat: {}'.format(content))
+        logger.debug('send_to_wechat: {}'.format(content))
 
         try:
             url = 'https://sc.ftqq.com/SCU41176Teb7e3a6397425be0f27a72a4c2fcdb885c3e08d2af0f5.send'
@@ -185,11 +200,10 @@ class Stock(object):
 
 if __name__ == '__main__':
     stock = Stock()
-    #stock.init_data(['000001.SZ'])
-    #stock._st_data['000001.SZ']
+    stock.init_data(['000001.SZ'])
+    #stock.init_data()
     #stock.get_poom()
     #stock.get_ma_go_up()    
     #stock.get_vol_go_up()
-    #stock.send_to_wechat(save=True)
-    print stock.send_to_wechat()
+    stock.send_to_wechat(save=True)
     

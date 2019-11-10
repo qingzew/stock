@@ -177,11 +177,16 @@ class Stock(object):
                     #content += url_format.format(name, fields[1] + fields[0])
         logger.debug('send_to_wechat: {}'.format(content))
 
-        try:
-            url = 'https://sc.ftqq.com/SCU41176Teb7e3a6397425be0f27a72a4c2fcdb885c3e08d2af0f5.send'
-            req = requests.post(url, data = {'text': 'Notice', 'desp': content})
-        except Exception as e:
-            logger.warning(e)
+        cnt = 10
+        while cnt != 0:
+            try:
+                url = 'https://sc.ftqq.com/SCU41176Teb7e3a6397425be0f27a72a4c2fcdb885c3e08d2af0f5.send'
+                req = requests.post(url, data = {'text': 'Notice', 'desp': content})
+                break
+            except Exception as e:
+                logger.warning('error to send to wechat {}'.format(e))
+                cnt -= 1
+
 
         if save == True:
             try:

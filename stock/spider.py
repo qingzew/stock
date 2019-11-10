@@ -32,31 +32,34 @@ class Spider:
             print('downloading {} {}...'.format(ts_code, name.encode('utf-8')))
 
             this_save_dir = os.path.join(output, ts_code + '_' + name)
-        try:
-            os.makedirs(this_save_dir)
-        except:
-            pass
+            try:
+                os.makedirs(this_save_dir)
+            except:
+                pass
 
-        dates = []
-        list_year = int(list_date[:4])
-        for y in xrange(list_year, end_year):
-            dates.append(str(y) + '0101')
+            dates = []
+            list_year = int(list_date[:4])
+            for y in xrange(list_year, end_year):
+                dates.append(str(y) + '0101')
 
-        for i in xrange(len(dates) - 1):
-            print('{}...'.format(dates[i]))
-            df = ts.pro_bar(pro_api=pro, 
-                ts_code=ts_code, 
-                asset='E', 
-                start_date=dates[i], 
-                end_date=dates[i + 1], 
-                freq='D', 
-                adj='hfq',
-                ma=[5, 10, 20, 40, 99, 250])
+            for i in xrange(len(dates) - 1):
+                print('{}...'.format(dates[i]))
+                df = ts.pro_bar(api=self.pro, 
+                    ts_code=ts_code, 
+                    asset='E', 
+                    start_date=dates[i], 
+                    end_date=dates[i + 1], 
+                    freq='D', 
+                    adj='hfq',)
+                    #ma=[5, 10, 20, 40, 99, 250])
 
-            this_save_name = dates[i] + '.csv'
-            df.to_csv(os.path.join(this_save_dir, this_save_name), index=False)
+                this_save_name = dates[i] + '.csv'
+                try:
+                    df.to_csv(os.path.join(this_save_dir, this_save_name), index=False)
+                except:
+                    pass
 
-            time.sleep(0.01)
+                time.sleep(0.01)
 
     def get_report_data(self, year, quarter, topk=None):
         print ts.get_report_data(year, quarter)
@@ -139,17 +142,19 @@ if __name__ == '__main__':
     #  op = args.type
     #  output_dir = args.output
 
-    spider = Spider()
+    #  spider = Spider()
     #  print spider.get_profit_data(2018, 2)
     #  print spider.get_operation_data(2018, 2)
     #  print spider.get_debtpaying_data(2018, 2)
 
-    stock_code = spider.get_stock_code()
-    choosed_code = spider.get_stock_by_basic(2018, 3, 500)
+    #  stock_code = spider.get_stock_code()
+    #  choosed_code = spider.get_stock_by_basic(2018, 3, 500)
 
-    print '\n##############'
-    for c in choosed_code:
-        print c, stock_code[c]
+    #  print '\n##############'
+    #  for c in choosed_code:
+    #      print c, stock_code[c]
 
-
+    spider = Spider()
+    basic_data = spider.get_basic_data()
+    spider.save_raw_data(basic_data, 'raw_data')
 

@@ -7,7 +7,8 @@ import tushare as ts
 
 class Spider:
     def __init__(self):
-        self.pro = ts.pro_api('95f7a4bf060e97230010a4287cf6db5a5e58c4deadef29f31d966978')
+        #self.pro = ts.pro_api('95f7a4bf060e97230010a4287cf6db5a5e58c4deadef29f31d966978')
+        self.pro = ts.pro_api('7e0df022a3af325bdf68870f9ca63abd4c8c79d35c1eaef2c3a69a98')
 
     def get_basic_data(self):
         basic_data = self.pro.stock_basic(exchange_id='', list_status='L', 
@@ -29,6 +30,8 @@ class Spider:
         end_year = int(time.strftime("%Y", time.localtime())) + 2
         for idx, row in basic_data.iterrows():
             ts_code, name, list_date = row['ts_code'], row['name'], row['list_date']
+            if ts_code != '002647.SZ':
+                continue
             print('downloading {} {}...'.format(ts_code, name.encode('utf-8')))
 
             this_save_dir = os.path.join(output, ts_code + '_' + name)
@@ -50,8 +53,8 @@ class Spider:
                     start_date=dates[i], 
                     end_date=dates[i + 1], 
                     freq='D', 
-                    adj='hfq',)
-                    #ma=[5, 10, 20, 40, 99, 250])
+                    adj='hfq',
+                    ma=[5, 10, 20, 30, 60])
 
                 this_save_name = dates[i] + '.csv'
                 try:

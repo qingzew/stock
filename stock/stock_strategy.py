@@ -21,7 +21,6 @@ import pandas as pd
 from pandas import Series, DataFrame
 import numpy as np
 
-from stock_data import StockData
 from logger import logger
 
 class StockStrategy(object):
@@ -171,11 +170,11 @@ class StockStrategy(object):
 
         days = 4 
         tmp_data = st_data[:days]
-        ma5 = tmp_data.ix[:, 'ma5'].tolist()
-        ma10 = tmp_data.ix[:, 'ma10'].tolist()
-        ma20 = tmp_data.ix[:, 'ma20'].tolist()
-        ma30 = tmp_data.ix[:, 'ma30'].tolist()
-        ma60 = tmp_data.ix[:, 'ma60'].tolist()
+        ma5 = tmp_data.loc[:, 'ma5'].tolist()
+        ma10 = tmp_data.loc[:, 'ma10'].tolist()
+        ma20 = tmp_data.loc[:, 'ma20'].tolist()
+        ma30 = tmp_data.loc[:, 'ma30'].tolist()
+        ma60 = tmp_data.loc[:, 'ma60'].tolist()
 
         #ma5 = st_data.ix[0:days:1, 'ma5'].tolist()
         #ma10 = st_data.ix[0:days:1, 'ma10'].tolist()
@@ -264,42 +263,90 @@ class StockStrategy(object):
 
         return ret
 
+    
+    def is_ma30_go_up(self, st_data):
+        days = 20 
+        if len(st_data) < days:
+            return False 
+
+        ts_code = st_data.iloc[0, 0]
+
+        tmp_data = st_data[:days]
+        #max_min_scaler = lambda x : (x-np.min(x))/(np.max(x)-np.min(x))
+        #tmp_data[['ma5']] = tmp_data[['ma5']].apply(max_min_scaler) 
+        #tmp_data[['ma10']] = tmp_data[['ma10']].apply(max_min_scaler) 
+        #tmp_data[['ma20']] = tmp_data[['ma20']].apply(max_min_scaler) 
+        #tmp_data[['ma30']] = tmp_data[['ma30']].apply(max_min_scaler) 
+        #tmp_data[['ma60']] = tmp_data[['ma60']].apply(max_min_scaler) 
+
+        ma5 = tmp_data.loc[:, 'ma5'].tolist()
+        ma10 = tmp_data.loc[:, 'ma10'].tolist()
+        ma20 = tmp_data.loc[:, 'ma20'].tolist()
+        ma30 = tmp_data.loc[:, 'ma30'].tolist()
+        ma60 = tmp_data.loc[:, 'ma60'].tolist()
+
+        #ma5 = st_data.ix[0:days:1, 'ma5'].tolist()
+        #ma10 = st_data.ix[0:days:1, 'ma10'].tolist()
+        #ma20 = st_data.ix[0:days:1, 'ma20'].tolist()
+        #logger.debug('{} ma5: {}'.format(ts_code, ma5))
+        #logger.debug('{} ma10: {}'.format(ts_code, ma10))
+        #logger.debug('{} ma20: {}'.format(ts_code, ma20))
+        #logger.debug('{} ma30: {}'.format(ts_code, ma30))
+        #logger.debug('{} ma60: {}'.format(ts_code, ma60))
+
+        if ma5[0] <= ma5[-1] or ma10[0] <= ma10[-1] or ma20[0] < ma20[-1]:
+            logger.debug('{} ma is going down'.format(ts_code))
+            return False
+
+        def diff_ratio(data):
+            res = []
+            for i in range(len(data) - 1):
+                res.append((data[i] - data[i + 1]) / (data[i + 1] + 1e-6))
+            return np.array(res)
+            
+        ma5_angle = np.arctan(diff_ratio(ma5) * 100) * 180 / 3.1416
+        ma10_angle = np.arctan(diff_ratio(ma10) * 100) * 180 / 3.1416
+        ma20_angle = np.arctan(diff_ratio(ma20) * 100) * 180 / 3.1416
+        ma30_angle = np.arctan(diff_ratio(ma30) * 100) * 180 / 3.1416
+        ma60_angle = np.arctan(diff_ratio(ma60) * 100) * 180 / 3.1416
+
+        #logger.debug('ma5_angle: {}'.format(ma5_angle))
+        #logger.debug('ma10_angle: {}'.format(ma10_angle))
+        #logger.debug('ma20_angle: {}'.format(ma20_angle))
+        #logger.debug('ma30_angle: {}'.format(ma30_angle))
+        #logger.debug('ma60_angle: {}'.format(ma60_angle))
+
+        
+        def is_true(data):
+            for i in range(len(data) - 1):
+                if not (data[i] > 10 and data[i] < 55 and \
+                        abs(data[i] - data[i + 1]) < 10):
+                    return False
+            return True
+
+        def is_true2(data1, data2):
+            for d1, d2 in zip(data1, data2):
+                if d1 < d2:
+                    return False
+            return True
+
+        logger.debug('{} ma10 angle: {}'.format(ts_code, ma10_angle))
+        logger.debug('{} ma20 angle: {}'.format(ts_code, ma20_angle))
+        logger.debug('{} ma30 angle: {}'.format(ts_code, ma30_angle))
+        logger.debug('{} ma10 tag: {}'.format(ts_code, is_true(ma10_angle)))
+        logger.debug('{} ma20 tag: {}'.format(ts_code, is_true(ma20_angle)))
+        logger.debug('{} ma30 tag: {}'.format(ts_code, is_true(ma30_angle)))
+        #return is_true(ma20_angle) or is_true(ma30_angle)
+        return is_true2(ma5, ma10) and is_true(ma30_angle)
+
+
     # vol go up
     def is_vol_go_up(self, st_data):
         days = 5 
-        vol = st_data.ix[0:days:1, 'vol'].tolist()
+        vol = st_data.loc[0:days:1, 'vol'].tolist()
 
         return all(x < y for x, y in zip(vol[0:], vol[1:]))
 
 
 if __name__ == '__main__':
-    import tushare as ts
-    pro = ts.pro_api('95f7a4bf060e97230010a4287cf6db5a5e58c4deadef29f31d966978')
-    
-    #start_date = (datetime.date.today() - datetime.timedelta(days=60)).strftime('%Y%m%d')
-    #end_date = datetime.date.today().strftime('%Y%m%d')
-    #df = ts.pro_bar(api=pro, 
-    #        ts_code='603222.SH', 
-    #        asset='E', 
-    #        start_date=start_date,
-    #        end_date=end_date,
-    #        freq='D',
-    #        adj='qfq', 
-    #        ma=[5, 10, 20])
-
-    end_date = datetime.date.today().strftime('%Y%m%d')
-    df = ts.pro_bar(api=pro, 
-            ts_code='002107.SZ', 
-            asset='E', 
-            end_date=end_date,
-            freq='D',
-            adj='qfq', 
-            ma=[5, 10, 20, 30, 60])
-    ss = StockStrategy()
-    #print ss.is_pricing_out_of_market(df)
-    #print ss.is_vol_go_up(df)
-  
-    ss.is_ma_go_up(df)
-    #for x in xrange(30, df.shape[0]):
-    #    tmp_df = df[-x:]
-    #    print ss.is_ma_go_up(tmp_df)
+    pass

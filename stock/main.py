@@ -28,6 +28,10 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('-r', '--run', help='run the script', action='store_true')
 parser.add_argument('-t', '--test', help='test the script', action='store_true')
+parser.add_argument('-a', '--ajob', help='test the script', action='store_true')
+parser.add_argument('-hk', '--hkjob', help='test the script', action='store_true')
+parser.add_argument('-us', '--usjob', help='test the script', action='store_true')
+parser.add_argument('-A', '--alljob', help='test the script', action='store_true')
 args = parser.parse_args()
 
 #def job():
@@ -100,23 +104,66 @@ def job():
     stock = Stock()
     logger.info('init stock data...')
     #stock.init_data('000001.SZ')
-    stock.init_data()
+    stock.get_all_data()
     logger.info('call stock strategy...')
 
-    stock.get_poom() 
-    stock.get_ma_go_up()
-    stock.get_vol_go_up()
+    #stock.get_poom() 
+    #stock.get_ma_go_up()
+    stock.get_ma30_go_up()
+    #stock.get_vol_go_up()
+    stock.get_us_ma30_go_up()
     stock.send_to_wechat(save=True)
 
 
+stock = Stock()
+def a_job():
+    logger.info('init stock data...')
+    stock.get_data_a()
+
+    stock.get_ma30_go_up_a()
+    stock.send_to_wechat(st_type='a')
+
+def us_job():
+    logger.info('init stock data...')
+    stock.get_data_us()
+
+    stock.get_ma30_go_up_us()
+    stock.send_to_wechat(st_type='us')
+
+def hk_job():
+    logger.info('init stock data...')
+    stock.get_data_hk()
+
+    stock.get_ma30_go_up_hk()
+    stock.send_to_wechat(st_type='hk')
+
+
 if __name__ == '__main__':
+    print(args)
     if args.run:
          sched = BlockingScheduler()
-         sched.add_job(job, 'cron', day_of_week='mon-fri',  hour=17, minute=30)
+         sched.add_job(a_job, 'cron', day_of_week='mon-fri',  hour=18, minute=30)
+         sched.add_job(hk_job, 'cron', day_of_week='mon-fri',  hour=19, minute=30)
+         sched.add_job(us_job, 'cron', day_of_week='mon-sat',  hour=8, minute=30)
          sched.start()
-    elif args.test:
-         logger.info('testing...')
-         job()
+    elif args.ajob:
+         logger.info('a job...')
+         a_job()
+    elif args.hkjob:
+         logger.info('hk job...')
+         hk_job()
+    elif args.usjob:
+         logger.info('us job...')
+         us_job()
+    elif args.alljob:
+         logger.info('a job...')
+         a_job()
+         logger.info('us job...')
+         us_job()
+         logger.info('hk job...')
+         hk_job()
+
+
     else:
         print('usage: main.py [-h] [-r] [-t]')
 

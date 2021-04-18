@@ -9,7 +9,7 @@
 ###############################################################
 
 """
-    @file stock_data_a.py
+    @file stock_data_kcb.py
     @author wangqingze
     @date 2019-03-04 10:24
     @brief
@@ -26,7 +26,7 @@ class StockData(object):
         self._symbol_to_name = {}
 
     def get_basic_data(self):
-        stock_df = dt.stock_zh_a_spot() 
+        stock_df = dt.stock_zh_kcb_spot() 
         self._symbols = []
         self._symbol_to_name = {}
 
@@ -51,7 +51,7 @@ class StockData(object):
 
     def get_df_by_symbol(self, symbol):
         try:
-            df = dt.stock_zh_a_daily(symbol)
+            df = dt.stock_zh_kcb_daily(symbol)
             df = add_sma_indicator(df)
             df = df[::-1]
             return df
@@ -60,9 +60,10 @@ class StockData(object):
 
         return None
 
+
 if __name__ == '__main__':
     sd = StockData()
-    #df1, df2 = sd.get_basic_data()
-    #print(df1)
+    df1, df2 = sd.get_basic_data()
+    print(df1)
     df = sd.get_df_by_symbol('sh600000')
     print(df)

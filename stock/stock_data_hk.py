@@ -19,7 +19,8 @@ import datetime
 import tushare as ts 
 import pandas as pd
 from logger import logger
-import akshare as ak
+from utils import add_sma_indicator
+import dtshare as dt
 
 class StockData(object):
     def __init__(self):
@@ -27,7 +28,7 @@ class StockData(object):
         self._symbol_to_name = {}
 
     def get_basic_data(self):
-        basic_datas = ak.stock_hk_spot()
+        basic_datas = dt.stock_hk_spot()
         for _, row in basic_datas.iterrows(): 
             symbol = row['symbol']
             name = row['name']
@@ -47,33 +48,24 @@ class StockData(object):
         return self._symbol_to_name
 
     def get_df_by_symbol(self, symbol): 
-        try:
-            df = ak.stock_hk_daily(symbol)
-            df = self._add_sma_indicator(df)
-            df = df[::-1]
-            return df
-        except Exception as e:
-            logger.warning(e)
+        #try:
+        #    df = dt.stock_hk_daily(symbol)
+        #    df = add_sma_indicator(df)
+        #    df = df[::-1]
+        #    return df
+        #except Exception as e:
+        #    logger.warning(e)
 
-        return None
+        #return None
 
-    def _add_sma_indicator(self, df):
-        #df['ma5'] = df['close'].ewm(span=5, adjust=False).mean() 
-        #df['ma10'] = df['close'].ewm(span=10, adjust=False).mean() 
-        #df['ma20'] = df['close'].ewm(span=20, adjust=False).mean() 
-        #df['ma30'] = df['close'].ewm(span=30, adjust=False).mean() 
-        #df['ma60'] = df['close'].ewm(span=60, adjust=False).mean() 
-        df['ma5'] = df['close'].rolling(window=5).mean()
-        df['ma10'] = df['close'].rolling(window=10).mean()
-        df['ma20'] = df['close'].rolling(window=20).mean()
-        df['ma30'] = df['close'].rolling(window=30).mean()
-        df['ma60'] = df['close'].rolling(window=60).mean()
-        df = df.fillna(0)
+        df = dt.stock_hk_daily(symbol)
+        df = add_sma_indicator(df)
+        df = df[::-1]
         return df
 
 
 if __name__ == '__main__':
     sd = StockData()
-    sd.get_basic_data()
+    #sd.get_basic_data()
     df = sd.get_df_by_symbol(symbol='00003')
     print(df)

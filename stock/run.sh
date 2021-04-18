@@ -1,3 +1,3 @@
 #rm nohup.out
-python main.py -A
-python3 main.py -r
+python3.8 main.py -A
+python3.8 main.py -r

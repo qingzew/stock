@@ -264,20 +264,15 @@ class StockStrategy(object):
         return ret
 
     
-    def is_ma30_go_up(self, st_data):
-        days = 20 
+    def is_ma30_go_up(self, symbol, st_data, days=20):
+        if st_data is None:
+            logger.info('{} has no data'.format(symbol))
+            return False, False 
+
         if len(st_data) < days:
             return False 
 
-        ts_code = st_data.iloc[0, 0]
-
         tmp_data = st_data[:days]
-        #max_min_scaler = lambda x : (x-np.min(x))/(np.max(x)-np.min(x))
-        #tmp_data[['ma5']] = tmp_data[['ma5']].apply(max_min_scaler) 
-        #tmp_data[['ma10']] = tmp_data[['ma10']].apply(max_min_scaler) 
-        #tmp_data[['ma20']] = tmp_data[['ma20']].apply(max_min_scaler) 
-        #tmp_data[['ma30']] = tmp_data[['ma30']].apply(max_min_scaler) 
-        #tmp_data[['ma60']] = tmp_data[['ma60']].apply(max_min_scaler) 
 
         ma5 = tmp_data.loc[:, 'ma5'].tolist()
         ma10 = tmp_data.loc[:, 'ma10'].tolist()
@@ -285,17 +280,8 @@ class StockStrategy(object):
         ma30 = tmp_data.loc[:, 'ma30'].tolist()
         ma60 = tmp_data.loc[:, 'ma60'].tolist()
 
-        #ma5 = st_data.ix[0:days:1, 'ma5'].tolist()
-        #ma10 = st_data.ix[0:days:1, 'ma10'].tolist()
-        #ma20 = st_data.ix[0:days:1, 'ma20'].tolist()
-        #logger.debug('{} ma5: {}'.format(ts_code, ma5))
-        #logger.debug('{} ma10: {}'.format(ts_code, ma10))
-        #logger.debug('{} ma20: {}'.format(ts_code, ma20))
-        #logger.debug('{} ma30: {}'.format(ts_code, ma30))
-        #logger.debug('{} ma60: {}'.format(ts_code, ma60))
-
         if ma5[0] <= ma5[-1] or ma10[0] <= ma10[-1] or ma20[0] < ma20[-1]:
-            logger.debug('{} ma is going down'.format(ts_code))
+            logger.debug('{} ma is going down'.format(symbol))
             return False
 
         def diff_ratio(data):
@@ -310,13 +296,6 @@ class StockStrategy(object):
         ma30_angle = np.arctan(diff_ratio(ma30) * 100) * 180 / 3.1416
         ma60_angle = np.arctan(diff_ratio(ma60) * 100) * 180 / 3.1416
 
-        #logger.debug('ma5_angle: {}'.format(ma5_angle))
-        #logger.debug('ma10_angle: {}'.format(ma10_angle))
-        #logger.debug('ma20_angle: {}'.format(ma20_angle))
-        #logger.debug('ma30_angle: {}'.format(ma30_angle))
-        #logger.debug('ma60_angle: {}'.format(ma60_angle))
-
-        
         def is_true(data):
             for i in range(len(data) - 1):
                 if not (data[i] > 10 and data[i] < 55 and \
@@ -330,13 +309,15 @@ class StockStrategy(object):
                     return False
             return True
 
-        logger.debug('{} ma10 angle: {}'.format(ts_code, ma10_angle))
-        logger.debug('{} ma20 angle: {}'.format(ts_code, ma20_angle))
-        logger.debug('{} ma30 angle: {}'.format(ts_code, ma30_angle))
-        logger.debug('{} ma10 tag: {}'.format(ts_code, is_true(ma10_angle)))
-        logger.debug('{} ma20 tag: {}'.format(ts_code, is_true(ma20_angle)))
-        logger.debug('{} ma30 tag: {}'.format(ts_code, is_true(ma30_angle)))
-        #return is_true(ma20_angle) or is_true(ma30_angle)
+        logger.debug('{} ma5 angle: {} angle flag: {}'.format(
+                symbol, ma5_angle, is_true(ma5_angle)))
+        logger.debug('{} ma10 angle: {} agnle flag: {} ma flag: {}'.format(
+                symbol, ma10_angle, is_true(ma10_angle), is_true2(ma5, ma10)))
+        logger.debug('{} ma20 angle: {} agnle flag: {} ma flag: {}'.format(
+                symbol, ma20_angle, is_true(ma20_angle), is_true2(ma10, ma20)))
+        logger.debug('{} ma30 angle: {} agnle flag: {} ma flag: {}'.format(
+                symbol, ma30_angle, is_true(ma30_angle), is_true2(ma20, ma30)))
+
         return is_true2(ma5, ma10) and is_true(ma30_angle)
 
 

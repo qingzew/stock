@@ -117,7 +117,7 @@ class Stock(object):
             df = self._sd_hk.get_df_by_symbol(symbol)
             self._st_data_hk[symbol] = df
 
-    def get_one_data(self, symbol_a=None, symbo_kcb=None, 
+    def get_one_data(self, symbol_a=None, symbol_kcb=None, 
             symbol_us=None, symbol_hk=None, days=90):
         """
         get stock data for once
@@ -281,6 +281,30 @@ class Stock(object):
             except Exception as e:
                 logger.warning(e)
 
+    def send_message( 
+            self,
+            content, 
+            token='', 
+            summary='stock msg',
+            topic_ids=[2544], 
+            content_type=3, 
+            uids=[],
+            msg_url=''):
+        """Send Message."""
+        msg = {
+                'appToken': token,
+                'summary': summary, 
+                'content': content,
+                'contentType': content_type,
+                'topicIds': topic_ids,
+                'uids': uids,
+                'url': msg_url
+            }
+
+        url = 'http://wxpusher.zjiecode.com/api/send/message'
+
+        return requests.post(url, json=msg).json()
+
 
     def send_to_wechat(self, st_type='a', save=False):
         url_format = '{} https://xueqiu.com/S/{}\n\n'
@@ -334,16 +358,21 @@ class Stock(object):
 
         logger.debug('send_to_wechat: {}'.format(content))
 
+        #cnt = 10
+        #while cnt != 0:
+        #    try:
+        #        url = 'https://sc.ftqq.com/SCU41176Teb7e3a6397425be0f27a72a4c2fcdb885c3e08d2af0f5.send'
+        #        req = requests.post(url, data = {'text': mp[st_type], 'desp': content})
+        #        break
+        #    except Exception as e:
+        #        logger.warning('error to send to wechat {}'.format(e))
+        #        cnt -= 1
+
         cnt = 10
         while cnt != 0:
-            try:
-                url = 'https://sc.ftqq.com/SCU41176Teb7e3a6397425be0f27a72a4c2fcdb885c3e08d2af0f5.send'
-                req = requests.post(url, data = {'text': mp[st_type], 'desp': content})
+            ret = self.send_message(summary=mp[st_type], content=content)
+            if ret['code'] == 1000:
                 break
-            except Exception as e:
-                logger.warning('error to send to wechat {}'.format(e))
-                cnt -= 1
-
 
         if save == True:
             try:
@@ -366,8 +395,6 @@ class Stock(object):
         symbol_to_name_a = self._sd_a.get_symbol_to_name()
         for k, v in symbol_to_name_a.items():
             st_name_to_symbol[v] = k
-
-        print(st_name_to_symbol)
 
         df = get_weibo_hot()
         content = ''
@@ -395,14 +422,14 @@ if __name__ == '__main__':
     #stock.get_ma_go_up()    
     #stock.get_vol_go_up()
     #stock.get_one_data(ts_code='000001.SZ', us_ts_code='AAPL', days=90)
-    #stock.get_one_data(symbol_a='000001.SZ', symbol_us='AAPL', symbol_hk='00003', days=90)
+    stock.get_one_data(symbol_a='000001.SZ', symbol_us='AAPL', symbol_hk='00003', days=90)
 
-    #stock.get_ma30_go_up_a()
-    #stock.send_to_wechat(st_type='a')
+    stock.get_ma30_go_up_a()
+    stock.send_to_wechat(st_type='a')
 
     #stock.get_ma30_go_up_us()
     #stock.send_to_wechat(st_type='us')
 
     #stock.get_ma30_go_up_hk()
     #stock.send_to_wechat(st_type='hk')
-    stock.send_hot_to_wechat()
+    #stock.send_hot_to_wechat()

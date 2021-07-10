@@ -48,20 +48,15 @@ class StockData(object):
         return self._symbol_to_name
 
     def get_df_by_symbol(self, symbol): 
-        #try:
-        #    df = dt.stock_hk_daily(symbol)
-        #    df = add_sma_indicator(df)
-        #    df = df[::-1]
-        #    return df
-        #except Exception as e:
-        #    logger.warning(e)
+        try:
+            df = dt.stock_hk_daily(symbol)
+            df = add_sma_indicator(df)
+            df = df[::-1]
+            return df
+        except Exception as e:
+            logger.warning(e)
 
-        #return None
-
-        df = dt.stock_hk_daily(symbol)
-        df = add_sma_indicator(df)
-        df = df[::-1]
-        return df
+        return None
 
 
 if __name__ == '__main__':

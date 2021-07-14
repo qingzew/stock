@@ -284,7 +284,7 @@ class Stock(object):
     def send_message( 
             self,
             content, 
-            token='', 
+            token='AT_Mp6haTsQAr12pcBmpoBNEMrPhRZEwt66', 
             summary='stock msg',
             topic_ids=[2544], 
             content_type=3, 
@@ -307,7 +307,7 @@ class Stock(object):
 
 
     def send_to_wechat(self, st_type='a', save=False):
-        url_format = '{} https://xueqiu.com/S/{}\n\n'
+        url_format = '{}\n https://xueqiu.com/S/{}\n\n'
         mp = {
                 'a': 'a股',
                 'kcb': '科创',

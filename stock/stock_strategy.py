@@ -3,7 +3,7 @@
 # vim:fenc=utf-8
 
 ###############################################################
-# Copyright (C) 2019 your company All Rights Reserved
+# Copyright (C) 2019 your company All Righst Reserved
 #
 # Distributed under terms of the GPL3 license.
 ###############################################################
@@ -15,6 +15,7 @@
     @brief
 """
 
+import os
 import datetime
 from collections import OrderedDict, defaultdict
 import pandas as pd
@@ -22,6 +23,128 @@ from pandas import Series, DataFrame
 import numpy as np
 
 from logger import logger
+import functools
+import charts
+
+
+def save_fig(func):
+    @functools.wraps(func)
+    def wrapper_func(*args, **kwargs):
+        flag, err, line, st_code, st = func(*args, **kwargs)
+
+        st_np = st.to_numpy()[-100:]
+        xaxis = []
+        stock_price = []
+        volume = []
+        for row in st_np:
+            d, o, h, l, c, v = row[0], row[1], row[2], row[3], row[4], row[5]
+            xaxis.append(d)
+            stock_price.append([o, c, l, h])
+            volume.append(v)
+
+        try:
+            os.makedirs('figs')
+        except:
+            pass
+        dst_file = os.path.join('figs', str(st_code) + '.html')
+        charts.draw_charts(xaxis, stock_price, volume, dst_file, special_line=line)
+
+        return flag, err
+    return wrapper_func
+
+
+def rmse(y, y_hat):
+    """
+    返回预测序列相对于真值序列的标准差。
+    Args:
+        y:
+        y_hat:
+
+    Returns:
+
+    """
+    return np.sqrt(np.mean(np.square(y - y_hat)))
+
+
+#def slope(st, err):
+def slope(st):
+    """
+    返回直线斜率。如果拟合误差大于err，则抛出异常
+    """
+    # 对st进行归一化，以便斜率可以在不同的时间序列之间进行比较
+    #assert st[0] != 0
+    norm = st[0] + 1e-6
+    st = st / norm
+    x = np.arange(len(st))
+    z = np.polyfit(x, st, deg=1)
+    p = np.poly1d(z)
+
+    line = np.array([float('{:.4f}'.format(p(xi) * norm)) for xi in x])
+    st_hat = np.array([p(xi) for xi in x])
+    error = rmse(st, st_hat) / np.sqrt(np.mean(np.square(st)))
+    #if error >= err:
+    #    #raise ValueError("can not fit into line, error: {}".format(error))
+    #    z = []
+    #    line = [] 
+    #    error = 1e6
+
+    return z[0], line, error
+
+
+def moving_average(st, win):
+    st_np = st.to_numpy().astype(np.float32)
+    return np.convolve(st_np, np.ones(win) / win, 'valid')
+
+
+def find_runs(x):
+    """Find runs of consecutive items in an array."""
+
+    # ensure array
+    x = np.asanyarray(x)
+    if x.ndim != 1:
+        raise ValueError('only 1D array supported')
+    n = x.shape[0]
+
+    # handle empty array
+    if n == 0:
+        return np.array([]), np.array([]), np.array([])
+
+    else:
+        # find run starst
+        loc_run_start = np.empty(n, dtype=bool)
+        loc_run_start[0] = True
+        np.not_equal(x[:-1], x[1:], out=loc_run_start[1:])
+
+        run_starts = np.nonzero(loc_run_start)[0]
+
+        # find run values
+        run_values = x[loc_run_start]
+
+        # find run lengths
+        run_lengths = np.diff(np.append(run_starts, n))
+
+        return run_values, run_starts, run_lengths
+
+def is_ma_up(ma, close):
+    ratio = close / ma
+
+    all_up = np.all([r > 1 and r < 1.05 for r in ratio]) 
+
+    return all_up
+
+
+def is_ma_up1(st, day):
+    all_up1 = np.all(st['close'][-day:] > st['open'][-day:]) 
+    all_up2 = np.all(st['close'][-day:] / st['close'][-day-1:-1] < 1.5) 
+
+    return all_up1 and all_up2
+
+def is_ma_up2(st, day):
+    all_up1 = np.all(st['close'][-day:] > st['open'][-day:]) 
+    all_up2 = np.all(st['close'][-day:] / st['close'][-day-1:-1] < 0.7) 
+
+    return all_up1 and all_up2
+
 
 class StockStrategy(object):
     """
@@ -32,321 +155,80 @@ class StockStrategy(object):
         """
         """
 
-    # pricing out of market
-    def is_pricing_out_of_market(self, st_data):
+    @save_fig
+    def is_ma_parallel(self, st, day, st_code=None, check_date=False):
         """
-        args:
-            st_data: stock price data in 10 consecutive days        
-
-        return:
-            whether the stock is pricing out of market
+        :param st: 收盘价数组
+        :params n: 多头排列刚形成day天
         """
-        ts_code = st_data.iloc[0, 0]
-        # today
-        trade_date_0 = st_data.iloc[0, 1]
-        open_price_0 = st_data.iloc[0, 2]
-        high_price_0 = st_data.iloc[0, 3]
-        low_price_0 = st_data.iloc[0, 4]
-        close_price_0 = st_data.iloc[0, 5]
-        pre_close_0 = st_data.iloc[0, 6]
-        #change_0 = st_data.iloc[0, 7]
-        pct_change_0 = st_data.iloc[0, 8]
-        vol_0 = st_data.iloc[0, 9]
 
-        # yestoday
-        trade_date_1 = st_data.iloc[1, 1]
-        open_price_1 = st_data.iloc[1, 2]
-        high_price_1 = st_data.iloc[1, 3]
-        low_price_1 = st_data.iloc[1, 4]
-        close_price_1 = st_data.iloc[1, 5]
-        pre_close_1 = st_data.iloc[1, 6]
-        #change_1 = st_data.iloc[1, 7]
-        pct_change_1 = st_data.iloc[1, 8]
-        vol_1 = st_data.iloc[1, 9]
+        inter = 200 
+        ma5 = st['ma5'][-inter:].to_numpy()
+        ma10 = st['ma10'][-inter:].to_numpy()
+        ma20 = st['ma20'][-inter:].to_numpy()
+        ma30 = st['ma30'][-inter:].to_numpy()
+        close = st['close'][-inter:].to_numpy()
+        date = st['date'][-day:].to_numpy()
 
-        # the day before yesterday
-        trade_date_2 = st_data.iloc[2, 1]
-        open_price_2 = st_data.iloc[2, 2]
-        high_price_2 = st_data.iloc[2, 3]
-        low_price_2 = st_data.iloc[2, 4]
-        close_price_2 = st_data.iloc[2, 5]
-        pre_close_2 = st_data.iloc[2, 6]
-        #change_2 = st_data.iloc[2, 7]
-        pct_change_2 = st_data.iloc[2, 8]
-        vol_2 = st_data.iloc[2, 9]
+        # ma parallel
+        signal = (ma5 > ma10) & (ma10 > ma20)
+        run_values, run_starts, run_lengths = find_runs(signal)
+        ma_parallel = run_values[-1] == True and run_lengths[-1] >= day
+        print(run_values)
+        print(run_lengths)
 
-        logger.debug('date: {} open: {} high: {} low: {} close: {} pct: {} vol: {}'.format(trade_date_0,
-            open_price_0, high_price_0, low_price_0, close_price_0, pct_change_0, vol_0))
+        # close > open
+        ma_up1 = is_ma_up(ma5[-day:], close[-day:]) 
 
-        logger.debug('date: {} open: {} high: {} low: {} close: {} pct: {} vol: {}'.format(trade_date_1,
-            open_price_1, high_price_1, low_price_1, close_price_1, pct_change_1, vol_1))
+        # go up for a long time 
+        #idx = inter // 3 if inter // 3 < len(st) else len(st)
+        #ma_up2 = True if ma5[-idx] < ma5[-1] else False
+        ma_up2 = True
 
-        logger.debug('date: {} open: {} high: {} low: {} close: {} pct: {} vol: {}'.format(trade_date_2,
-            open_price_2, high_price_2, low_price_2, close_price_2, pct_change_2, vol_2))
+        # volume
+        volume_flag = st['volume'].to_numpy()[-1] > 5000000
 
-        if pct_change_0 > 9.95 and pct_change_1 > 9.95:
-            logger.debug('====maybe this is the one====')
+        # with a slope
+        #slp, line, err = slope(ma5[-day:], 0.1)
+        #slp_flag = slp is not None and slp < 0.05 and slp > 0.015 
+        try:
+            slp, line, err = slope(ma5[-day:])
+            slp_flag = err < 0.1 and slp > 0.015 
+            line = {k: v for k, v in zip(date, line)}
+        except:
+            slp_flag = False
+            line = {}
+            err = 1e6
 
-        flag_poom_1st = False
-        if pct_change_0 > 9.95 and abs(low_price_0 - close_price_0) < 0.05:
-            if abs(low_price_1 - high_price_1) > 0.1:
-                flag_poom_1st = True
-            else: 
-                logger.debug('poom 1st {} {} fail'.format(ts_code, trade_date_1))
+        if check_date:
+            date_flag = date[-1] == datetime.date.today()
         else:
-            logger.debug('poom 1st {} {} fail'.format(ts_code, trade_date_0))
+            date_flag = True 
 
-        flag_poom_2ed = False
-        if pct_change_0 > 9.95 and abs(low_price_0 - close_price_0) < 0.05:
-            if pct_change_1 > 9.95 and abs(low_price_1 - close_price_1) < 0.05:
-                #if pct_change_2 <= 0.98 and low_price_2 < high_price_2:
-                    #if vol_0 < vol_1 and vol_1 < vol2:
-                    #    return True
-                if abs(low_price_2 - high_price_2) > 0.1:
-                    flag_poom_2ed = True
-                else: 
-                    logger.debug('poom 2ed {} {} fail'.format(ts_code, trade_date_2))
-            else:
-                logger.debug('poom 2ed {} {} fail'.format(ts_code, trade_date_1))
-        else: 
-            logger.debug('poom 2ed {} {} fail'.format(ts_code, trade_date_0))
 
-          
-        flag_poom_1 = False 
-        if pct_change_0 > 9.95:
-            flag_poom_1 = True
-        
-        flag_poom_2 = False 
-        if pct_change_0 > 9.95 and pct_change_1 > 9.95: 
-            flag_poom_2 = True
+        final_flag = ma_parallel & ma_up1 & ma_up2 & slp_flag & date_flag
+        logger.info('code: {} {} ma_parallel: {} ma_up1: {} ma_up2:{}  volume_flag: {} slp_flag: {} date_flag: {}'.format(
+                st_code, final_flag, ma_parallel, ma_up1, ma_up2, volume_flag, slp_flag, date_flag))
 
-        return flag_poom_1st, flag_poom_2ed, flag_poom_1, flag_poom_2
 
-    # ma go up
-    #def is_ma_go_up(self, st_data):
-    #    days = 4 
-    #    ma5 = st_data.ix[0:days:1, 'ma5'].tolist()
-    #    ma10 = st_data.ix[0:days:1, 'ma10'].tolist()
-    #    ma20 = st_data.ix[0:days:1, 'ma20'].tolist()
-
-    #    if ma5[0] <= ma[-1]:
-    #        return False, False
-
-    #    #ma5_subtract_ma10 = (np.array(ma5) - np.array(ma10)) / np.array(ma10)
-    #    #ma10_subtract_ma20 = (np.array(ma10) - np.array(ma20)) / np.array(ma20)
-    #    ma5_subtract_ma10 = np.array(ma5) - np.array(ma10)
-    #    ma10_subtract_ma20 = np.array(ma10) - np.array(ma20)
-    #    logger.debug('ma5 - ma10 {}'.format(ma5_subtract_ma10))
-    #    logger.debug('ma10 - ma20 {}'.format(ma10_subtract_ma20))
-    #   
-    #    #ma5_decrease = all(x / y > 1.05 for x, y in zip(ma5_subtract_ma10[0:], ma5_subtract_ma10[1:]))
-    #    #ma10_decrease = all(x / y > 1.03 for x, y in zip(ma10_subtract_ma20[0:], ma10_subtract_ma20[1:]))
-    #    #ma5_subtract_ma10 = ma5_subtract_ma10 > 0
-    #    #ma10_subtract_ma20 = ma10_subtract_ma20 > 0
-
-    #    ma5_decrease = all(x / y > 1.0 for x, y in zip(ma5_subtract_ma10[0:], ma5_subtract_ma10[1:]))
-    #    ma10_decrease = all(x / y > 1.0 for x, y in zip(ma10_subtract_ma20[0:], ma10_subtract_ma20[1:]))
-
-    #    def is_two_seg(arr):
-    #        idx = np.where(arr == 0)[0]
-    #        if idx.shape[0] == 0:
-    #            return False
-    #        
-    #        return np.sum(arr[idx[0]:]) == 0
-    #    
-    #    ma5_pattern = False
-    #    ma10_pattern = False
-    #    
-    #    if is_two_seg(ma5_subtract_ma10):
-    #        ma5_pattern = True
-    #    if is_two_seg(ma10_subtract_ma20):
-    #        ma5_pattern = True
-
-    #    return ma5_decrease and ma5_pattern, ma10_decrease and ma10_pattern
-
-    # ma go up
-    def is_ma_go_up(self, st_data):
-        ts_code = st_data.iloc[0, 0]
-
-        days = 4 
-        tmp_data = st_data[:days]
-        ma5 = tmp_data.loc[:, 'ma5'].tolist()
-        ma10 = tmp_data.loc[:, 'ma10'].tolist()
-        ma20 = tmp_data.loc[:, 'ma20'].tolist()
-        ma30 = tmp_data.loc[:, 'ma30'].tolist()
-        ma60 = tmp_data.loc[:, 'ma60'].tolist()
-
-        #ma5 = st_data.ix[0:days:1, 'ma5'].tolist()
-        #ma10 = st_data.ix[0:days:1, 'ma10'].tolist()
-        #ma20 = st_data.ix[0:days:1, 'ma20'].tolist()
-        logger.debug('{} ma5: {}'.format(ts_code, ma5))
-        logger.debug('{} ma10: {}'.format(ts_code, ma10))
-        logger.debug('{} ma20: {}'.format(ts_code, ma20))
-        logger.debug('{} ma30: {}'.format(ts_code, ma30))
-        logger.debug('{} ma60: {}'.format(ts_code, ma60))
-
-        if ma5[0] <= ma5[-1] or ma10[0] <= ma10[-1] or ma20[0] < ma20[-1]:
-            logger.debug('{} ma is going down'.format(ts_code))
-            return {} 
-
-        #if ma5[0] / ma5[-1] < 1.1:
-        #    logger.debug('ma is going down')
-        #    return {} 
-
-        ma5_ratio = np.array([round(x / y, 2) for x, y in zip(ma5[0:], ma10[0:])])
-        ma10_ratio = np.array([round(x / y, 2) for x, y in zip(ma10[0:], ma20[0:])])
-        ma20_ratio = np.array([round(x / y, 2) for x, y in zip(ma20[0:], ma30[0:])])
-        ma30_ratio = np.array([round(x / y, 2) for x, y in zip(ma30[0:], ma60[0:])])
-
-        ma5_sort = ma5_ratio[np.where(ma5_ratio > 1.)[0]]
-        ma10_sort = ma10_ratio[np.where(ma10_ratio > 1.)[0]]
-        ma20_sort = ma20_ratio[np.where(ma20_ratio > 1.)[0]]
-        ma30_sort = ma30_ratio[np.where(ma30_ratio > 1.)[0]]
-        is_ma5_sort = all((x > y) for x, y in zip(ma5_sort[0:], ma5_sort[1:])) and len(ma5_sort) > 0
-        is_ma10_sort = all((x > y) for x, y in zip(ma10_sort[0:], ma10_sort[1:])) and len(ma10_sort) > 0
-        is_ma20_sort = all((x > y)  for x, y in zip(ma20_sort[0:], ma20_sort[1:])) and len(ma20_sort) > 0
-        is_ma30_sort = all((x > y) for x, y in zip(ma30_sort[0:], ma30_sort[1:])) and len(ma30_sort) > 0
-        logger.debug('{} ma5 sort: {} {}'.format(ts_code, ma5_sort, is_ma5_sort))
-        logger.debug('{} ma10 sort: {} {}'.format(ts_code, ma10_sort, is_ma10_sort))
-        logger.debug('{} ma20 sort: {} {}'.format(ts_code, ma20_sort, is_ma20_sort))
-        logger.debug('{} ma30 sort: {} {}'.format(ts_code, ma30_sort, is_ma30_sort))
-
-        def is_two_seg(arr):
-            idx = np.where(arr == 0)[0]
-            if idx.shape[0] == 0 or idx.shape[0] > days / 2:
-                return False 
-            
-            return np.sum(arr[idx[0]:]) == 0
-
-        is_ma5_two_seg = False
-        is_ma10_two_seg = False
-        is_ma20_two_seg = False
-        is_ma30_two_seg = False
-        ma5_two_seg = np.array([int(e) for e in ma5_ratio > 1.])
-        ma10_two_seg = np.array([int(e) for e in ma10_ratio > 1.])
-        ma20_two_seg = np.array([int(e) for e in ma20_ratio > 1.])
-        ma30_two_seg = np.array([int(e) for e in ma30_ratio > 1.])
-
-        if is_two_seg(ma5_two_seg):
-            is_ma5_two_seg = True
-        if is_two_seg(ma10_two_seg):
-            is_ma10_two_seg = True
-        if is_two_seg(ma20_two_seg):
-            is_ma20_two_seg = True
-        if is_two_seg(ma30_two_seg):
-            is_ma30_two_seg = True
-
-        logger.debug('{} ma5 two seg: {} {}'.format(ts_code, ma5_two_seg, is_ma5_two_seg))
-        logger.debug('{} ma10 two seg: {} {}'.format(ts_code, ma10_two_seg, is_ma10_two_seg))
-        logger.debug('{} ma20 two seg: {} {}'.format(ts_code, ma20_two_seg, is_ma20_two_seg))
-        logger.debug('{} ma30 two seg: {} {}'.format(ts_code, ma30_two_seg, is_ma30_two_seg))
-
-        ma_sort_short = is_ma5_sort and is_ma10_sort
-        ma_sort_medium = is_ma5_sort and is_ma10_sort and is_ma20_sort
-        ma_sort_long = is_ma5_sort and is_ma10_sort and is_ma20_sort and is_ma30_sort
-
-        ma_short = (is_ma5_sort and is_ma5_two_seg) and (is_ma10_sort and is_ma10_two_seg) 
-        ma_medium = (is_ma5_sort and is_ma5_two_seg) and (is_ma10_sort and is_ma10_two_seg) \
-                and (is_ma20_sort and is_ma20_two_seg)
-        ma_long = (is_ma5_sort and is_ma5_two_seg) and (is_ma10_sort and is_ma10_two_seg) \
-                and (is_ma20_sort and is_ma20_two_seg) and (is_ma30_sort and is_ma30_two_seg)
-
-        ret = {
-            'ma_sort_short': ma_sort_short, 
-            'ma_sort_medium': ma_sort_medium, 
-            'ma_sort_long': ma_sort_long, 
-            'ma_short': ma_short, 
-            'ma_medium': ma_medium, 
-            'ma_long': ma_long, 
-        }
-        logger.debug('{} ret: {}'.format(ts_code, ret))
-
-        return ret
-
+        return final_flag, err, line, st_code, st
     
-    def is_ma30_go_up(self, st_data):
-        days = 20 
-        if len(st_data) < days:
-            return False 
-
-        ts_code = st_data.iloc[0, 0]
-
-        tmp_data = st_data[:days]
-        #max_min_scaler = lambda x : (x-np.min(x))/(np.max(x)-np.min(x))
-        #tmp_data[['ma5']] = tmp_data[['ma5']].apply(max_min_scaler) 
-        #tmp_data[['ma10']] = tmp_data[['ma10']].apply(max_min_scaler) 
-        #tmp_data[['ma20']] = tmp_data[['ma20']].apply(max_min_scaler) 
-        #tmp_data[['ma30']] = tmp_data[['ma30']].apply(max_min_scaler) 
-        #tmp_data[['ma60']] = tmp_data[['ma60']].apply(max_min_scaler) 
-
-        ma5 = tmp_data.loc[:, 'ma5'].tolist()
-        ma10 = tmp_data.loc[:, 'ma10'].tolist()
-        ma20 = tmp_data.loc[:, 'ma20'].tolist()
-        ma30 = tmp_data.loc[:, 'ma30'].tolist()
-        ma60 = tmp_data.loc[:, 'ma60'].tolist()
-
-        #ma5 = st_data.ix[0:days:1, 'ma5'].tolist()
-        #ma10 = st_data.ix[0:days:1, 'ma10'].tolist()
-        #ma20 = st_data.ix[0:days:1, 'ma20'].tolist()
-        #logger.debug('{} ma5: {}'.format(ts_code, ma5))
-        #logger.debug('{} ma10: {}'.format(ts_code, ma10))
-        #logger.debug('{} ma20: {}'.format(ts_code, ma20))
-        #logger.debug('{} ma30: {}'.format(ts_code, ma30))
-        #logger.debug('{} ma60: {}'.format(ts_code, ma60))
-
-        if ma5[0] <= ma5[-1] or ma10[0] <= ma10[-1] or ma20[0] < ma20[-1]:
-            logger.debug('{} ma is going down'.format(ts_code))
-            return False
-
-        def diff_ratio(data):
-            res = []
-            for i in range(len(data) - 1):
-                res.append((data[i] - data[i + 1]) / (data[i + 1] + 1e-6))
-            return np.array(res)
-            
-        ma5_angle = np.arctan(diff_ratio(ma5) * 100) * 180 / 3.1416
-        ma10_angle = np.arctan(diff_ratio(ma10) * 100) * 180 / 3.1416
-        ma20_angle = np.arctan(diff_ratio(ma20) * 100) * 180 / 3.1416
-        ma30_angle = np.arctan(diff_ratio(ma30) * 100) * 180 / 3.1416
-        ma60_angle = np.arctan(diff_ratio(ma60) * 100) * 180 / 3.1416
-
-        #logger.debug('ma5_angle: {}'.format(ma5_angle))
-        #logger.debug('ma10_angle: {}'.format(ma10_angle))
-        #logger.debug('ma20_angle: {}'.format(ma20_angle))
-        #logger.debug('ma30_angle: {}'.format(ma30_angle))
-        #logger.debug('ma60_angle: {}'.format(ma60_angle))
-
-        
-        def is_true(data):
-            for i in range(len(data) - 1):
-                if not (data[i] > 10 and data[i] < 55 and \
-                        abs(data[i] - data[i + 1]) < 10):
-                    return False
-            return True
-
-        def is_true2(data1, data2):
-            for d1, d2 in zip(data1, data2):
-                if d1 < d2:
-                    return False
-            return True
-
-        logger.debug('{} ma10 angle: {}'.format(ts_code, ma10_angle))
-        logger.debug('{} ma20 angle: {}'.format(ts_code, ma20_angle))
-        logger.debug('{} ma30 angle: {}'.format(ts_code, ma30_angle))
-        logger.debug('{} ma10 tag: {}'.format(ts_code, is_true(ma10_angle)))
-        logger.debug('{} ma20 tag: {}'.format(ts_code, is_true(ma20_angle)))
-        logger.debug('{} ma30 tag: {}'.format(ts_code, is_true(ma30_angle)))
-        #return is_true(ma20_angle) or is_true(ma30_angle)
-        return is_true2(ma5, ma10) and is_true(ma30_angle)
-
-
-    # vol go up
-    def is_vol_go_up(self, st_data):
-        days = 5 
-        vol = st_data.loc[0:days:1, 'vol'].tolist()
-
-        return all(x < y for x, y in zip(vol[0:], vol[1:]))
-
 
 if __name__ == '__main__':
-    pass
+    import os
+    import pandas as pd
+
+    st = StockStrategy()
+    #root_dir = 'data/us'
+    #root_dir = 'data/kcb'
+    root_dir = 'data/a'
+    for f in os.listdir(root_dir):
+        path = os.path.join(root_dir, f)
+        st_code = f.split('.')[0]
+
+        if st_code != 'sz000963':
+            continue
+        df = pd.read_csv(path)
+        st.is_ma_parallel(df, 10, st_code, check_date=False)
+
+        break

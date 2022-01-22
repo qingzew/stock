@@ -9,20 +9,18 @@
 ###############################################################
 
 """
-    @file stock_data_hk.py
+    @file stock_data_zh.py
     @author wangqingze
     @date 2019-03-04 10:24
     @brief
 """
 
 import datetime
-import pandas as pd
-#import logging
-#from logger import logger
+import logging
+from logger import logger
 from utils import add_sma
 import dtshare as dt
 
-#logger.setLevel(logging.ERROR)
 
 class StockData(object):
     def __init__(self):
@@ -30,17 +28,21 @@ class StockData(object):
         self._symbol_to_name = {}
 
     def get_basic_data(self):
-        basic_datas = dt.stock_hk_spot()
-        for _, row in basic_datas.iterrows(): 
+        stock_df = dt.stock_zh_a_spot() 
+        self._symbols = []
+        self._symbol_to_name = {}
+
+        for _, row in stock_df.iterrows():
             symbol = row['symbol']
-            name = row['name']
             self._symbols.append(symbol)
-            self._symbol_to_name[symbol] = name 
-        return self._symbols,  self._symbol_to_name
+            self._symbol_to_name[symbol] = row['name']
+
+        return self._symbols, self._symbol_to_name
 
     def get_symbols(self):
         if len(self._symbols) == 0:
             self.get_basic_data()
+
         return self._symbols
 
     def get_symbol_to_name(self):
@@ -49,9 +51,9 @@ class StockData(object):
 
         return self._symbol_to_name
 
-    def get_df_by_symbol(self, symbol): 
+    def get_df_by_symbol(self, symbol):
         #try:
-        #    df = dt.stock_hk_daily(symbol)
+        #    df = dt.stock_zh_a_daily(symbol)
         #    df = add_sma_indicator(df)
         #    #df = df[::-1]
         #    return df
@@ -60,13 +62,19 @@ class StockData(object):
 
         #return None
 
-        df = dt.stock_hk_daily(symbol)
-        df = add_sma(df, 'hk')
+        df = dt.stock_zh_a_daily(symbol)
+        df = add_sma(df, 'zh')
         return df
 
 
 if __name__ == '__main__':
     sd = StockData()
-    #sd.get_basic_data()
-    df = sd.get_df_by_symbol(symbol='00003')
+    #df1, df2 = sd.get_basic_data()
+    #print(df1)
+    #df = sd.get_df_by_symbol('sh688005')
+    #df.to_csv('688005.csv')
+
+    df = sd.get_df_by_symbol('sz300073')
+    df.to_csv('300073.csv')
+
     print(df)

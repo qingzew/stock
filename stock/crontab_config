@@ -1,0 +1,3 @@
+0 17 * * 1-5 cd /home/wang/code/stock/stock/ && /usr/bin/python3.8 main.py -ja
+0 20 * * 1-5 cd /home/wang/code/stock/stock/ && /usr/bin/python3.8 main.py -jh
+0 7 * * 1-5 cd /home/wang/code/stock/stock/ && /usr/bin/python3.8 main.py -ju

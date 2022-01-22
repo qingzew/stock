@@ -20,10 +20,10 @@ import os
 import codecs
 import requests
 import datetime
-from apscheduler.schedulers.blocking import BlockingScheduler
+#from apscheduler.schedulers.blocking import BlockingScheduler
 from logger import logger
 from stock import Stock 
-import gc
+from multiprocessing import Pool
 
 import argparse
 parser = argparse.ArgumentParser()
@@ -40,55 +40,48 @@ stock = Stock()
 def a_job():
     logger.info('init stock data...')
 
-    stock.get_data_a()
-    stock.get_ma30_go_up_a()
-    stock.send_to_wechat(st_type='a')
+    stock.get_data_zh()
+    #stock.get_ma30_go_up_a()
+    #stock.get_ma20_flag_a()
+    stock.get_ma_parallel_flag_zh()
 
 
 def kcb_job():
     logger.info('init stock data...')
 
     stock.get_data_kcb()
-    stock.get_ma30_go_up_kcb()
-    stock.send_to_wechat(st_type='kcb')
+    #stock.get_ma30_go_up_kcb()
+    #stock.get_ma20_flag_kcb()
+    stock.get_ma_parallel_flag_kcb()
+
+    #stock.send_to_wechat(st_type='kcb')
 
 
 def us_job():
     logger.info('init stock data...')
 
     stock.get_data_us()
-    stock.get_ma30_go_up_us()
-    stock.send_to_wechat(st_type='us')
+    #stock.get_ma30_go_up_us()
+    #stock.get_ma20_flag_us()
+    stock.get_ma_parallel_flag_us()
+
+    #stock.send_to_wechat(st_type='us')
 
 
 def hk_job():
     logger.info('init stock data...')
 
     stock.get_data_hk()
-    stock.get_ma30_go_up_hk()
-    stock.send_to_wechat(st_type='hk')
+    #stock.get_ma30_go_up_hk()
+    #stock.get_ma20_flag_hk()
+    stock.get_ma_parallel_flag_hk()
 
-def job_a():
-    a_job()
-    kcb_job()
-
-def job_hk():
-    hk_job()
-
-def job_us():
-    us_job()
+    #stock.send_to_wechat(st_type='hk')
 
 if __name__ == '__main__':
     print(args)
-    if args.run:
-         sched = BlockingScheduler()
-         #sched.add_job(a_job, 'cron', day_of_week='mon-fri',  hour=17, minute=00)
-         #sched.add_job(hk_job, 'cron', day_of_week='mon-fri',  hour=20, minute=00)
-         #sched.add_job(us_job, 'cron', day_of_week='mon-sat',  hour=8, minute=30)
-         sched.add_job(job_a, 'cron', day_of_week='mon-fri',  hour=17, minute=00)
-         sched.add_job(job_b, 'cron', day_of_week='mon-sat',  hour=6, minute=00)
-         sched.start()
-    elif args.alljob:
+    
+    if args.alljob:
          logger.info('a job...')
          a_job()
          logger.info('kcb job...')
@@ -97,15 +90,18 @@ if __name__ == '__main__':
          us_job()
          logger.info('hk job...')
          hk_job()
+
     elif args.joba:
          logger.info('a job...')
          a_job()
          kcb_job()
+
     elif args.jobhk:
          logger.info('hk job...')
          hk_job()
+
     elif args.jobus:
-         logger.info('hk job...')
+         logger.info('us job...')
          us_job()
 
     else:

@@ -9,16 +9,18 @@
 ###############################################################
 
 """
-    @file stock_data_a.py
+    @file stock_data_zh.py
     @author wangqingze
     @date 2019-03-04 10:24
     @brief
 """
 
 import datetime
+import logging
 from logger import logger
-from utils import add_sma_indicator
+from utils import add_sma
 import dtshare as dt
+
 
 class StockData(object):
     def __init__(self):
@@ -50,19 +52,29 @@ class StockData(object):
         return self._symbol_to_name
 
     def get_df_by_symbol(self, symbol):
-        try:
-            df = dt.stock_zh_a_daily(symbol)
-            df = add_sma_indicator(df)
-            df = df[::-1]
-            return df
-        except Exception as e:
-            logger.warning(e)
+        #try:
+        #    df = dt.stock_zh_a_daily(symbol)
+        #    df = add_sma_indicator(df)
+        #    #df = df[::-1]
+        #    return df
+        #except Exception as e:
+        #    logger.error('{} download data error: {}'.format(symbol, e))
 
-        return None
+        #return None
+
+        df = dt.stock_zh_a_daily(symbol)
+        df = add_sma(df, 'zh')
+        return df
+
 
 if __name__ == '__main__':
     sd = StockData()
     #df1, df2 = sd.get_basic_data()
     #print(df1)
-    df = sd.get_df_by_symbol('sh600000')
+    #df = sd.get_df_by_symbol('sh688005')
+    #df.to_csv('688005.csv')
+
+    df = sd.get_df_by_symbol('sz300073')
+    df.to_csv('300073.csv')
+
     print(df)

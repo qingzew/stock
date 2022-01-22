@@ -16,9 +16,12 @@
 """
 
 import datetime
-from logger import logger
-from utils import add_sma_indicator
+#import logging
+#from logger import logger
+from utils import add_sma
 import dtshare as dt
+
+#logger.setLevel(logging.ERROR)
 
 class StockData(object):
     def __init__(self):
@@ -50,15 +53,19 @@ class StockData(object):
         return self._symbol_to_name
 
     def get_df_by_symbol(self, symbol):
-        try:
-            df = dt.stock_zh_kcb_daily(symbol)
-            df = add_sma_indicator(df)
-            df = df[::-1]
-            return df
-        except Exception as e:
-            logger.warning(e)
+        #try:
+        #    df = dt.stock_zh_kcb_daily(symbol)
+        #    df = add_sma_indicator(df)
+        #    #df = df[::-1]
+        #    return df
+        #except Exception as e:
+        #    logger.error('{} download data error: {}'.format(symbol, e))
 
-        return None
+        #return None
+
+        df = dt.stock_zh_kcb_daily(symbol)
+        df = add_sma(df, 'kcb')
+        return df
 
 
 if __name__ == '__main__':

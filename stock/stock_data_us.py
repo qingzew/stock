@@ -16,20 +16,33 @@
 """
 
 import datetime
-import tushare as ts 
 import pandas as pd
-from logger import logger
-from utils import add_sma_indicator
+#import logging
+#from logger import logger
+from utils import add_sma
 import dtshare as dt
+from multiprocessing import Pool
+
+#logger.setLevel(logging.ERROR)
+
+def chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
+
 
 class StockData(object):
     def __init__(self):
 
         self._symbols = []
         self._symbol_to_name = {}
+        self._symbol_to_df = {}
 
     def get_basic_data(self):
-        basic_datas = dt.stock_us_spot() 
+        try:
+            basic_datas = dt.stock_us_spot() 
+        except:
+            pass
         for _, row in basic_datas.iterrows(): 
             symbol = row['symbol']
             name = row['name']
@@ -50,19 +63,48 @@ class StockData(object):
         return self._symbol_to_name
 
     def get_df_by_symbol(self, symbol): 
-        try:
-            df = dt.stock_us_daily(symbol)
-            df = add_sma_indicator(df)
-            df = df[::-1]
-            return df
-        except Exception as e:
-            logger.warning(e)
+        #try:
+        #    df = dt.stock_us_daily(symbol)
+        #    df = add_sma_indicator(df)
+        #    #df = df[::-1]
+        #    return df
+        #except Exception as e:
+        #    logger.error('{} download data error: {}'.format(symbol, e))
 
-        return None
+        #return None
+
+        df = dt.stock_us_daily(symbol)
+        df = add_sma(df, 'us')
+        return df
 
 
 if __name__ == '__main__':
+    #sd = StockData()
+    ##sd.get_basic_data()
+    #symbols = sd.get_symbols()
+    #print(len(symbols))
+
+    import os
+    def mkdir(directory):
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+    mkdir('stockdata/us_train')
+    mkdir('stockdata/us_test')
     sd = StockData()
-    #sd.get_basic_data()
-    df = sd.get_df_by_symbol(symbol='GS')
-    print(df)
+
+    symbols = sd.get_symbols()
+
+    for symbol in symbols:
+        print(symbol)
+        try:
+            df = sd.get_df_by_symbol(symbol)
+
+            train = df[:'2021-01-01']
+            test = df['2021-01-01':]
+
+            if df is not None:
+                train.to_csv(os.path.join('stockdata/us_train', symbol + '.csv'))
+                test.to_csv(os.path.join('stockdata/us_test', symbol + '.csv'))
+        except Exception as e:
+            print(e)

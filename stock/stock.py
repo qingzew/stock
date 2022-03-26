@@ -34,7 +34,7 @@ work_dir = os.path.dirname(os.path.realpath(__file__))
 #url_format = '{}\n https://xueqiu.com/S/{}\n\n'
 url_format = '[{}](https://xueqiu.com/S/{})\n\n'
 
-p_day = 5
+p_day = 2
 
 class Stock(object):
     """
@@ -407,6 +407,7 @@ class Stock(object):
                 'url': msg_url
             }
 
+        logger.info('sending: {}'.format(msg))
         url = 'http://wxpusher.zjiecode.com/api/send/message'
         for i in range(10):
             ret = requests.post(url, json=msg).json()

@@ -42,7 +42,8 @@ def calculate_ma(day_count: int, data):
         result.append(abs(float("%.3f" % (sum_total / day_count))))
     return result
 
-def draw_charts(xaxis, stock_price, volume, output_html, indicator=None, special_line=None):
+#def draw_charts(xaxis, stock_price, volume, output_html, indicator=None, special_line=None):
+def draw_charts(xaxis, stock_price, volume, output_html, indicator=None, slines=None):
     # Kline
     kline = Kline()
     kline.add_xaxis(xaxis_data=xaxis)
@@ -81,7 +82,7 @@ def draw_charts(xaxis, stock_price, volume, output_html, indicator=None, special
             visualmap_opts=opts.VisualMapOpts(
                 is_show=False,
                 dimension=2,
-                series_index=5,
+                series_index=6,
                 is_piecewise=True,
                 pieces=[
                     {"value": 1, "color": "#00da3c"},
@@ -127,13 +128,23 @@ def draw_charts(xaxis, stock_price, volume, output_html, indicator=None, special
             is_hover_animation=False,
             linestyle_opts=opts.LineStyleOpts(width=3, opacity=0.5),
             label_opts=opts.LabelOpts(is_show=False))
+    line.add_yaxis(
+            series_name="MA60",
+            y_axis=calculate_ma(day_count=60, data=stock_price),
+            is_smooth=True,
+            is_hover_animation=False,
+            linestyle_opts=opts.LineStyleOpts(width=3, opacity=0.5),
+            label_opts=opts.LabelOpts(is_show=False))
+
     line.set_global_opts(xaxis_opts=opts.AxisOpts(type_="category"))
 
     kline = kline.overlap(line)
 
-    if special_line is not None:
-        x = list(special_line.keys())
-        y = list(special_line.values())
+    #if special_line is not None:
+
+    for sline in slines:
+        x = list(sline.keys())
+        y = list(sline.values())
         sline = Line()
         sline.add_xaxis(xaxis_data=x)
 

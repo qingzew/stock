@@ -74,7 +74,8 @@ if __name__ == '__main__':
     #df = sd.get_df_by_symbol('sh688005')
     #df.to_csv('688005.csv')
 
-    df = sd.get_df_by_symbol('sz300073')
-    df.to_csv('300073.csv')
+    df = sd.get_df_by_symbol('sh600051')
+    print(df.tail())
+    #df.to_csv('300073.csv')
 
     print(df)
